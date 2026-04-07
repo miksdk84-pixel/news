@@ -9,20 +9,27 @@
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: #fff; margin: 0; padding-bottom: 80px; }
         header { padding: 20px; border-bottom: 1px solid #222; text-align: center; }
         h1 { margin: 0; font-size: 16px; letter-spacing: 3px; color: var(--brndby); text-transform: uppercase; }
-        .league-nav { display: flex; gap: 10px; overflow-x: auto; padding: 15px; background: #0a0a0a; position: sticky; top: 0; z-index: 100; }
-        .nav-item { background: #222; padding: 8px 15px; border-radius: 20px; font-size: 10px; font-weight: 800; white-space: nowrap; border: 1px solid #333; color: #fff; }
+        
+        .league-nav { display: flex; gap: 10px; overflow-x: auto; padding: 15px; background: #0a0a0a; position: sticky; top: 0; z-index: 100; scrollbar-width: none; }
+        .league-nav::-webkit-scrollbar { display: none; }
+        
+        .nav-item { background: #222; padding: 8px 15px; border-radius: 20px; font-size: 10px; font-weight: 800; white-space: nowrap; border: 1px solid #333; color: #fff; cursor: pointer; }
         .nav-item.active { background: var(--brndby); color: #000; border-color: var(--brndby); }
+        
         .match-card { background: var(--card); margin: 15px; border-radius: 20px; border: 1px solid #222; overflow: hidden; }
         .match-top { background: #1a1a1a; padding: 8px 15px; font-size: 9px; color: #666; display: flex; justify-content: space-between; font-weight: 800; }
         .match-body { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
+        
         .team { flex: 1; text-align: center; font-weight: 700; font-size: 14px; }
         .score-box { background: #000; padding: 10px; border-radius: 12px; min-width: 75px; text-align: center; border: 1px solid #333; }
         .score-val { font-size: 24px; font-weight: 900; color: var(--brndby); display: block; }
+        
         .standings-container { margin: 15px; background: var(--card); border-radius: 20px; padding: 15px; border: 1px solid #222; }
-        .row { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; font-size: 13px; }
+        .row { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; font-size: 13px; align-items: center; }
         .pos { width: 25px; font-weight: 900; color: #444; }
-        .team-n { flex: 1; font-weight: 600; }
+        .team-n { flex: 1; font-weight: 600; padding-left: 5px; }
         .pts { font-weight: 900; color: var(--brndby); width: 30px; text-align: right; }
+        
         .loading { padding: 40px; text-align: center; color: #444; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .section-label { padding: 10px 20px 0; font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; }
     </style>
@@ -32,8 +39,8 @@
 <header><h1>M-ELITE LIVE HUB</h1></header>
 
 <div class="section-label">Top Focus 🇩🇰</div>
-<div class="match-card" style="border: 1px solid rgba(255, 238, 0, 0.3);">
-    <div class="match-top" style="background:rgba(255, 238, 0, 0.05)"><span>SUPERLIGA</span> <span>NÆSTE KAMP</span></div>
+<div class="match-card" style="border: 1px solid rgba(255, 238, 0, 0.4);">
+    <div class="match-top" style="background:rgba(255, 238, 0, 0.1)"><span>SUPERLIGA</span> <span>NÆSTE KAMP</span></div>
     <div class="match-body">
         <div class="team" style="color:var(--brndby)">Brøndby IF</div>
         <div class="score-box" style="border-color:var(--brndby)">
@@ -63,24 +70,36 @@
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             element.classList.add('active');
         }
-        document.getElementById('matchList').innerHTML = '<div class="loading">Opdaterer scores...</div>';
-        document.getElementById('standingList').innerHTML = '';
+        
+        const matchList = document.getElementById('matchList');
+        const standingList = document.getElementById('standingList');
+        
+        matchList.innerHTML = '<div class="loading">Opdaterer scores...</div>';
+        standingList.innerHTML = '';
+
         const headers = { 'X-Auth-Token': API_KEY };
+        
         try {
-            const mResponse = await fetch(`${baseUrl}${leagueCode}/matches?limit=10`, { headers });
-            const mData = await mResponse.json();
+            // Hent Kampe
+            const mRes = await fetch(`${baseUrl}${leagueCode}/matches?limit=10`, { headers });
+            if (mRes.status === 429) throw new Error("API-grænse nået");
+            const mData = await mRes.json();
             renderMatches(mData.matches, leagueCode);
-            const sResponse = await fetch(`${baseUrl}${leagueCode}/standings`, { headers });
-            const sData = await sResponse.json();
+
+            // Hent Stilling
+            const sRes = await fetch(`${baseUrl}${leagueCode}/standings`, { headers });
+            const sData = await sRes.json();
             renderStandings(sData.standings[0].table, leagueCode);
+
         } catch (error) {
-            document.getElementById('matchList').innerHTML = '<div class="loading" style="color:red">FEJL: API BEGRÆNSNING ELLER FORBINDELSE.</div>';
+            matchList.innerHTML = `<div class="loading" style="color:red">FEJL: ${error.message === 'API-grænse nået' ? 'Vent 60 sekunder' : 'Tjek forbindelse'}</div>`;
         }
     }
 
     function renderMatches(matches, league) {
         const list = document.getElementById('matchList');
         if(!matches || matches.length === 0) { list.innerHTML = '<div class="loading">Ingen aktuelle kampe.</div>'; return; }
+        
         list.innerHTML = '<div class="section-label">Kampe</div>' + 
         matches.map(m => `
             <div class="match-card">
@@ -115,6 +134,8 @@
             </div>
         `;
     }
+
+    // Start med Premier League
     fetchData('PL');
 </script>
 </body>
