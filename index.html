@@ -9,32 +9,31 @@
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: #fff; margin: 0; padding-bottom: 80px; }
         header { padding: 20px; border-bottom: 1px solid #222; text-align: center; }
         h1 { margin: 0; font-size: 16px; letter-spacing: 3px; color: var(--brndby); text-transform: uppercase; }
-
         .league-nav { display: flex; gap: 10px; overflow-x: auto; padding: 15px; background: #0a0a0a; position: sticky; top: 0; z-index: 100; }
         .nav-item { background: #222; padding: 8px 15px; border-radius: 20px; font-size: 10px; font-weight: 800; white-space: nowrap; border: 1px solid #333; color: #fff; }
         .nav-item.active { background: var(--brndby); color: #000; border-color: var(--brndby); }
-
         .match-card { background: var(--card); margin: 15px; border-radius: 20px; border: 1px solid #222; overflow: hidden; }
         .match-top { background: #1a1a1a; padding: 8px 15px; font-size: 9px; color: #666; display: flex; justify-content: space-between; font-weight: 800; }
         .match-body { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
         .team { flex: 1; text-align: center; font-weight: 700; font-size: 14px; }
-        .score-box { background: #000; padding: 10px; border-radius: 12px; min-width: 70px; text-align: center; border: 1px solid #333; }
+        .score-box { background: #000; padding: 10px; border-radius: 12px; min-width: 75px; text-align: center; border: 1px solid #333; }
         .score-val { font-size: 24px; font-weight: 900; color: var(--brndby); display: block; }
-        
-        .standings { margin: 15px; background: var(--card); border-radius: 20px; padding: 15px; border: 1px solid #222; }
+        .standings-container { margin: 15px; background: var(--card); border-radius: 20px; padding: 15px; border: 1px solid #222; }
         .row { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; font-size: 13px; }
         .pos { width: 25px; font-weight: 900; color: #444; }
         .team-n { flex: 1; font-weight: 600; }
-        .pts { font-weight: 900; color: var(--brndby); }
-        .loading { padding: 40px; text-align: center; color: #444; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+        .pts { font-weight: 900; color: var(--brndby); width: 30px; text-align: right; }
+        .loading { padding: 40px; text-align: center; color: #444; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .section-label { padding: 10px 20px 0; font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <header><h1>M-ELITE LIVE HUB</h1></header>
 
-<div class="match-card" style="border: 1px solid var(--brndby);">
-    <div class="match-top" style="background:rgba(255, 238, 0, 0.1)"><span>SUPERLIGA</span> <span>NÆSTE KAMP</span></div>
+<div class="section-label">Top Focus 🇩🇰</div>
+<div class="match-card" style="border: 1px solid rgba(255, 238, 0, 0.3);">
+    <div class="match-top" style="background:rgba(255, 238, 0, 0.05)"><span>SUPERLIGA</span> <span>NÆSTE KAMP</span></div>
     <div class="match-body">
         <div class="team" style="color:var(--brndby)">Brøndby IF</div>
         <div class="score-box" style="border-color:var(--brndby)">
@@ -51,8 +50,8 @@
 </div>
 
 <div id="content">
-    <div id="matchList" class="loading">Henter live scores...</div>
-    <div id="standingList" class="standings"></div>
+    <div id="matchList" class="loading">Henter live data...</div>
+    <div id="standingList"></div>
 </div>
 
 <script>
@@ -64,32 +63,25 @@
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             element.classList.add('active');
         }
-        
-        document.getElementById('matchList').innerHTML = '<div class="loading">Opdaterer data...</div>';
+        document.getElementById('matchList').innerHTML = '<div class="loading">Opdaterer scores...</div>';
         document.getElementById('standingList').innerHTML = '';
-
         const headers = { 'X-Auth-Token': API_KEY };
-        
         try {
-            // Hent Kampe
-            const mResponse = await fetch(`${baseUrl}${leagueCode}/matches?limit=8`, { headers });
+            const mResponse = await fetch(`${baseUrl}${leagueCode}/matches?limit=10`, { headers });
             const mData = await mResponse.json();
             renderMatches(mData.matches, leagueCode);
-
-            // Hent Stilling
             const sResponse = await fetch(`${baseUrl}${leagueCode}/standings`, { headers });
             const sData = await sResponse.json();
-            renderStandings(sData.standings[0].table);
+            renderStandings(sData.standings[0].table, leagueCode);
         } catch (error) {
-            document.getElementById('matchList').innerHTML = '<div class="loading" style="color:red">FEJL: KUNNE IKKE HENTE DATA. TJEK DIN FORBINDELSE.</div>';
+            document.getElementById('matchList').innerHTML = '<div class="loading" style="color:red">FEJL: API BEGRÆNSNING ELLER FORBINDELSE.</div>';
         }
     }
 
     function renderMatches(matches, league) {
         const list = document.getElementById('matchList');
-        if(!matches || matches.length === 0) { list.innerHTML = '<div class="loading">Ingen aktuelle kampe fundet.</div>'; return; }
-        
-        list.innerHTML = '<div style="padding: 10px 20px 0; font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase;">Kampe</div>' + 
+        if(!matches || matches.length === 0) { list.innerHTML = '<div class="loading">Ingen aktuelle kampe.</div>'; return; }
+        list.innerHTML = '<div class="section-label">Kampe</div>' + 
         matches.map(m => `
             <div class="match-card">
                 <div class="match-top"><span>${league}</span> <span>${m.status === 'TIMED' ? new Date(m.utcDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : m.status}</span></div>
@@ -104,25 +96,26 @@
         `).join('');
     }
 
-    function renderStandings(table) {
+    function renderStandings(table, league) {
         const list = document.getElementById('standingList');
         list.innerHTML = `
-            <div style="font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; margin-bottom:10px;">Top 10 Stilling</div>
-            <div class="row" style="font-size:9px; color:#444; font-weight:900;">
-                <span class="pos">#</span><span class="team-n">HOLD</span><span>K</span><span class="pts">P</span>
+            <div class="section-label">Stilling: ${league}</div>
+            <div class="standings-container">
+                <div class="row" style="font-size:9px; color:#444; font-weight:900; border-bottom:1px solid #222;">
+                    <span class="pos">#</span><span class="team-n">HOLD</span><span style="width:30px; text-align:center;">K</span><span class="pts">P</span>
+                </div>
+                ${table.slice(0, 10).map(t => `
+                    <div class="row">
+                        <span class="pos">${t.position}</span>
+                        <span class="team-n">${t.team.shortName || t.team.name}</span>
+                        <span style="width:30px; text-align:center;">${t.playedGames}</span>
+                        <span class="pts">${t.points}</span>
+                    </div>
+                `).join('')}
             </div>
-        ` + table.slice(0, 10).map(t => `
-            <div class="row">
-                <span class="pos">${t.position}</span>
-                <span class="team-n">${t.team.shortName || t.team.name}</span>
-                <span style="width:30px; text-align:center;">${t.playedGames}</span>
-                <span class="pts">${t.points}</span>
-            </div>
-        `).join('');
+        `;
     }
-
     fetchData('PL');
 </script>
-
 </body>
 </html>
